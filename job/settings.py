@@ -46,6 +46,17 @@ INSTALLED_APPS = [
     'jobapp',
 ]
 
+AUTH_USER_MODEL = 'jobapp.User'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'jobapp.jwtauth.JWTAuthentication',
+    ),
+    # 'DEFAULT_FILTER_BACKENDS': (
+    #     'django_filters.rest_framework.DjangoFilterBackend',
+    # ),
+}
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
