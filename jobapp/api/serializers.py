@@ -33,7 +33,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user_type = validated_data.pop('type')
         user = User.objects.create_user(**validated_data)
-        if user_type == 'seeker':
+        if user_type != 'corporate':
             profile = Profile()
             profile.user = user
             profile.save()

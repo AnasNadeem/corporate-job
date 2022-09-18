@@ -2,7 +2,7 @@ from django.urls import path
 from .views import (
     RegisterAPiView,
     LoginApiView,
-    LoginApiByTokenView,
+    UserInfoByTokenView,
     CorporateViewset,
     JobViewset,
     ViewJobsView,
@@ -22,7 +22,7 @@ urlpatterns = [
     # Authentication Urls
     path('register/', RegisterAPiView.as_view(), name='register'),
     path('login/', LoginApiView.as_view(), name='login'),
-    path('login_by_token/', LoginApiByTokenView.as_view(), name='login-by-token'),
+    path('user_info_by_token/', UserInfoByTokenView.as_view(), name='login-by-token'),
     path('all_jobs/', ViewJobsView.as_view(), name='view-jobs'),
     path('job_interest/', ShowInterestJobView.as_view(), name='like-job'),
 ]

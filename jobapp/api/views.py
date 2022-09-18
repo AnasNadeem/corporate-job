@@ -45,13 +45,19 @@ class LoginApiView(views.APIView):
             return response.Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
         auth_token = jwt.encode({'email': user.email}, settings.SECRET_KEY, algorithm='HS256')
+        profile = Profile.objects.filter(user=user).first()
+        if profile:
+            profile_serializer_data = ProfileSerializer(profile).data
+            resp_data = {'profile': profile_serializer_data, 'token': auth_token}
+            resp_status = status.HTTP_200_OK
+            return response.Response(resp_data, status=resp_status)
         user_serializer_data = UserSerializer(user).data
         resp_data = {'user': user_serializer_data, 'token': auth_token}
         resp_status = status.HTTP_200_OK
         return response.Response(resp_data, status=resp_status)
 
 
-class LoginApiByTokenView(GenericAPIView):
+class UserInfoByTokenView(GenericAPIView):
 
     def post(self, request):
         data = request.data
@@ -61,10 +67,15 @@ class LoginApiByTokenView(GenericAPIView):
 
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms='HS256')
         user = User.objects.filter(email=payload['email']).first()
-        if user:
-            user_serializer_data = UserSerializer(user).data
-            return response.Response(user_serializer_data, status=status.HTTP_200_OK)
-        return response.Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
+        if not user:
+            return response.Response({'error': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)
+        profile = Profile.objects.filter(user=user).first()
+        if profile:
+            profile_serializer_data = ProfileSerializer(profile).data
+            resp_data = {'profile': profile_serializer_data}
+            return response.Response(resp_data, status=status.HTTP_200_OK)
+        user_serializer_data = UserSerializer(user).data
+        return response.Response(user_serializer_data, status=status.HTTP_200_OK)
 
 
 class CorporateViewset(ModelViewSet):
