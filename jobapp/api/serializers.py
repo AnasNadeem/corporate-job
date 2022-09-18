@@ -1,4 +1,4 @@
-from jobapp.models import User
+from jobapp.models import Corporate, Job, Profile, User
 from rest_framework import serializers
 
 
@@ -31,4 +31,67 @@ class RegisterSerializer(serializers.ModelSerializer):
         return super().validate(attrs)
 
     def create(self, validated_data):
-        return User.objects.create_user(**validated_data)
+        user_type = validated_data.pop('type')
+        user = User.objects.create_user(**validated_data)
+        if user_type == 'seeker':
+            profile = Profile()
+            profile.user = user
+            profile.save()
+        return user
+
+
+class JobSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Job
+        fields = '__all__'
+        depth = 1
+
+
+class CorporateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Corporate
+        fields = '__all__'
+
+
+class CorporateWithJobSerializer(serializers.ModelSerializer):
+    corporate_jobs = serializers.SerializerMethodField()
+    user = UserSerializer()
+
+    class Meta:
+        model = Corporate
+        fields = (
+            'id',
+            'user',
+            'description',
+            'corporate_jobs',
+        )
+
+    def get_corporate_jobs(self, obj):
+        corporate = Corporate.objects.get(pk=obj.id)
+        jobs = corporate.job_set.all()
+        jobs_serializer = JobSerializer(jobs, many=True)
+        return jobs_serializer.data
+
+
+class ProfileSerializer(serializers.ModelSerializer):
+    user = UserSerializer()
+
+    class Meta:
+        model = Profile
+        fields = '__all__'
+
+
+# class JobWithUserInterestSerializer(serializers.ModelSerializer):
+#     corporate = CorporateSerializer()
+
+#     class Meta:
+#         model = Job
+#         fields = (
+#             'id',
+#             'corporate',
+#             'title',
+#             'description',
+#             'total_interest',
+#         )

@@ -41,7 +41,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     # Third Party Apps
+    'corsheaders',
     'rest_framework',
+    'django_filters',
     # Our Apps
     'jobapp',
 ]
@@ -52,9 +54,11 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'jobapp.jwtauth.JWTAuthentication',
     ),
-    # 'DEFAULT_FILTER_BACKENDS': (
-    #     'django_filters.rest_framework.DjangoFilterBackend',
-    # ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'PAGE_SIZE': 100,
+    'DEFAULT_FILTER_BACKENDS': (
+        'django_filters.rest_framework.DjangoFilterBackend',
+    ),
 }
 
 MIDDLEWARE = [
@@ -68,6 +72,11 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'job.urls'
+
+CORS_ORIGIN_WHITELIST = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+]
 
 TEMPLATES = [
     {

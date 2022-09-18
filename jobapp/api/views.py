@@ -3,13 +3,20 @@ import jwt
 from django.conf import settings
 
 from rest_framework import response, status, views
-from rest_framework.generics import GenericAPIView
-# from rest_framework.viewsets import ModelViewSet
+from rest_framework.generics import GenericAPIView, ListAPIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.viewsets import ModelViewSet
+from django_filters import rest_framework as filters
 
-from .serializers import (RegisterSerializer,
+from .serializers import (ProfileSerializer,
+                          RegisterSerializer,
                           UserSerializer,
+                          CorporateSerializer,
+                          CorporateWithJobSerializer,
+                          JobSerializer,
                           )
-from jobapp.models import User
+from jobapp.models import User, Corporate, Profile, Job
+from jobapp.permissions import IsCorporateOrJobOwner, IsCorporateJobOwner
 
 
 class RegisterAPiView(GenericAPIView):
@@ -58,3 +65,75 @@ class LoginApiByTokenView(GenericAPIView):
             user_serializer_data = UserSerializer(user).data
             return response.Response(user_serializer_data, status=status.HTTP_200_OK)
         return response.Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+class CorporateViewset(ModelViewSet):
+    queryset = Corporate.objects.all()
+    permission_classes = (IsAuthenticated, IsCorporateOrJobOwner,)
+    serializer_class = CorporateSerializer
+
+    def get_serializer_class(self):
+        if self.action in ['list', 'retrieve']:
+            return CorporateWithJobSerializer
+        return self.serializer_class
+
+
+class JobViewset(ModelViewSet):
+    queryset = Job.objects.all()
+    permission_classes = (IsAuthenticated, IsCorporateJobOwner,)
+    serializer_class = JobSerializer
+    filter_backends = (filters.DjangoFilterBackend,)
+    filterset_fields = ('id', 'corporate', 'title', 'description', 'total_interest')
+
+
+class ProfileViewset(ModelViewSet):
+    queryset = Profile.objects.all()
+    permission_classes = (IsAuthenticated, IsCorporateOrJobOwner,)
+    serializer_class = ProfileSerializer
+
+
+class ViewJobsView(ListAPIView):
+    queryset = Job.objects.all()
+    permission_classes = (IsAuthenticated,)
+    serializer_class = JobSerializer
+    filter_backends = (filters.DjangoFilterBackend,)
+    filterset_fields = ('id', 'corporate', 'title', 'description', 'total_interest')
+
+    # def get(self, request, *args, **kwargs):
+    #     profile = Profile.objects.filter(user=request.user).first()
+    #     response = super().get(request, *args, **kwargs)
+    #     response.data['interest'] =
+
+
+class ShowInterestJobView(GenericAPIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request):
+        data = request.data
+        job = data.get('job')
+        action = data.get('action', 'add')
+        if not job:
+            return response.Response({'error': 'Job id cannot be blank'}, status=status.HTTP_400_BAD_REQUEST)
+        job = Job.objects.filter(pk=job).first()
+        if not job:
+            return response.Response({'error': 'No such job exist'}, status=status.HTTP_400_BAD_REQUEST)
+
+        profile = Profile.objects.filter(user=request.user).first()
+        if not profile:
+            return response.Response({'error': 'Invalid Profile'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if job not in profile.interest_jobs:
+            return response.Response({'error': 'Invalid request. Job already unintrested'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if action == 'remove':
+            profile.interest_jobs.remove(job)
+            profile.save()
+            job.total_interest -= 1
+            job.save()
+        else:
+            profile.interest_jobs.add(job)
+            profile.save()
+            job.total_interest += 1
+            job.save()
+        job_serializer = JobSerializer(job)
+        return response.Response(job_serializer.data, status=status.HTTP_200_OK)
