@@ -57,7 +57,7 @@ class LoginApiView(views.APIView):
         return response.Response(resp_data, status=resp_status)
 
 
-class UserInfoByTokenView(GenericAPIView):
+class UserInfoByTokenView(views.APIView):
 
     def post(self, request):
         data = request.data
@@ -116,7 +116,7 @@ class ViewJobsView(ListAPIView):
     #     response.data['interest'] =
 
 
-class ShowInterestJobView(GenericAPIView):
+class ShowInterestJobView(views.APIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request):

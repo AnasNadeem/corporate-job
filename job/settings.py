@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     # Third Party Apps
+    'drf_yasg',
     'corsheaders',
     'rest_framework',
     'django_filters',
@@ -49,6 +50,16 @@ INSTALLED_APPS = [
 ]
 
 AUTH_USER_MODEL = 'jobapp.User'
+
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        "Auth Token [Bearer Token]": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
