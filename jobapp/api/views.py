@@ -9,6 +9,7 @@ from rest_framework.viewsets import ModelViewSet
 from django_filters import rest_framework as filters
 
 from .serializers import (ProfileSerializer,
+                          RegisterUserSerializer,
                           RegisterSerializer,
                           UserSerializer,
                           CorporateSerializer,
@@ -19,14 +20,48 @@ from jobapp.models import User, Corporate, Profile, Job
 from jobapp.permissions import IsCorporateOrJobOwner, IsCorporateJobOwner
 
 
-class RegisterAPiView(GenericAPIView):
-    serializer_class = RegisterSerializer
+class RegisterUserAPiView(GenericAPIView):
+    serializer_class = RegisterUserSerializer
 
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return response.Response(serializer.data, status=status.HTTP_201_CREATED)
+        return response.Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class RegisterAPiView(GenericAPIView):
+    serializer_class = RegisterSerializer
+
+    def post(self, request):
+        data = request.data
+        serializer = self.serializer_class(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            user = User.objects.filter(email=serializer.data['email']).first()
+            if not user:
+                return response.Response({'error': 'Register error. Try again'}, status=status.HTTP_400_BAD_REQUEST)
+
+            auth_token = jwt.encode({'email': user.email}, settings.SECRET_KEY, algorithm='HS256')
+            user_serializer = UserSerializer(user)
+            resp_data = {'user': user_serializer.data, 'token': auth_token}
+            user_type = data.get('type', 'profile')
+            resp_data['is_corporate'] = False
+
+            if user_type == 'corporate':
+                corporate = Corporate.objects.filter(user=user).first()
+                resp_data['is_corporate'] = True
+                corporate_serializer = CorporateSerializer(corporate)
+                resp_data['data'] = corporate_serializer.data
+
+            profile = Profile.objects.filter(user=user).first()
+            resp_data['is_corporate'] = True
+            profile_serializer = ProfileSerializer(profile)
+            resp_data['data'] = profile_serializer.data
+
+            resp_status = status.HTTP_201_CREATED
+            return response.Response(resp_data, status=resp_status)
         return response.Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -45,14 +80,18 @@ class LoginApiView(views.APIView):
             return response.Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
         auth_token = jwt.encode({'email': user.email}, settings.SECRET_KEY, algorithm='HS256')
+        resp_data = {'token': auth_token}
+
         profile = Profile.objects.filter(user=user).first()
         if profile:
             profile_serializer_data = ProfileSerializer(profile).data
-            resp_data = {'profile': profile_serializer_data, 'token': auth_token}
-            resp_status = status.HTTP_200_OK
-            return response.Response(resp_data, status=resp_status)
-        user_serializer_data = UserSerializer(user).data
-        resp_data = {'user': user_serializer_data, 'token': auth_token}
+            resp_data['data'] = profile_serializer_data
+
+        corporate = Corporate.objects.filter(user=user).first()
+        if corporate:
+            corporate_serializer_data = ProfileSerializer(profile).data
+            resp_data['data'] = corporate_serializer_data
+
         resp_status = status.HTTP_200_OK
         return response.Response(resp_data, status=resp_status)
 

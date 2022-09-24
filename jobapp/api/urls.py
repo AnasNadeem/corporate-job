@@ -1,5 +1,6 @@
 from django.urls import path
 from .views import (
+    RegisterUserAPiView,
     RegisterAPiView,
     LoginApiView,
     UserInfoByTokenView,
@@ -20,6 +21,7 @@ router.register(r"profile", ProfileViewset, basename="profile")
 
 urlpatterns = [
     # Authentication Urls
+    path('register_user/', RegisterUserAPiView.as_view(), name='register_user'),
     path('register/', RegisterAPiView.as_view(), name='register'),
     path('login/', LoginApiView.as_view(), name='login'),
     path('user_info_by_token/', UserInfoByTokenView.as_view(), name='login-by-token'),
