@@ -38,10 +38,11 @@ class RegisterUserSerializer(serializers.ModelSerializer):
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(max_length=50, min_length=4, write_only=True)
     email = serializers.EmailField(max_length=100)
+    is_corporate = serializers.BooleanField(default=True)
 
     class Meta:
         model = User
-        fields = ('email', 'password')
+        fields = ('email', 'password', 'is_corporate')
 
     def validate(self, attrs):
         email = attrs.get('email', '')
@@ -50,15 +51,16 @@ class RegisterSerializer(serializers.ModelSerializer):
         return super().validate(attrs)
 
     def create(self, validated_data):
-        user_type = validated_data.pop('type', '')
+        user_type = validated_data.pop('is_corporate')
         user = User.objects.create_user(**validated_data)
-        if user_type == 'corporate':
+        if user_type:
             corporate = Corporate()
             corporate.user = user
             corporate.save()
-        profile = Profile()
-        profile.user = user
-        profile.save()
+        else:
+            profile = Profile()
+            profile.user = user
+            profile.save()
         return user
 
 
