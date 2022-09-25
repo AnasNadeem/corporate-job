@@ -47,14 +47,15 @@ class RegisterAPiView(GenericAPIView):
             user_serializer = UserSerializer(user)
             resp_data = {'user': user_serializer.data, 'token': auth_token}
 
-            is_corporate = serializer.data['is_corporate']
-            resp_data['is_corporate'] = is_corporate
-            if is_corporate:
-                corporate = Corporate.objects.filter(user=user).first()
+            corporate = Corporate.objects.filter(user=user).first()
+            if corporate:
+                resp_data['is_corporate'] = True
                 corporate_serializer = CorporateSerializer(corporate)
                 resp_data['data'] = corporate_serializer.data
-            else:
-                profile = Profile.objects.filter(user=user).first()
+
+            profile = Profile.objects.filter(user=user).first()
+            if profile:
+                resp_data['is_corporate'] = False
                 profile_serializer = ProfileSerializer(profile)
                 resp_data['data'] = profile_serializer.data
 
