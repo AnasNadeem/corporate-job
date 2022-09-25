@@ -46,19 +46,18 @@ class RegisterAPiView(GenericAPIView):
             auth_token = jwt.encode({'email': user.email}, settings.SECRET_KEY, algorithm='HS256')
             user_serializer = UserSerializer(user)
             resp_data = {'user': user_serializer.data, 'token': auth_token}
-            user_type = data.get('type', 'profile')
-            resp_data['is_corporate'] = False
 
-            if user_type == 'corporate':
-                corporate = Corporate.objects.filter(user=user).first()
+            corporate = Corporate.objects.filter(user=user).first()
+            if corporate:
                 resp_data['is_corporate'] = True
                 corporate_serializer = CorporateSerializer(corporate)
                 resp_data['data'] = corporate_serializer.data
 
             profile = Profile.objects.filter(user=user).first()
-            resp_data['is_corporate'] = False
-            profile_serializer = ProfileSerializer(profile)
-            resp_data['data'] = profile_serializer.data
+            if profile:
+                resp_data['is_corporate'] = False
+                profile_serializer = ProfileSerializer(profile)
+                resp_data['data'] = profile_serializer.data
 
             resp_status = status.HTTP_201_CREATED
             return response.Response(resp_data, status=resp_status)
