@@ -56,7 +56,7 @@ class RegisterAPiView(GenericAPIView):
                 resp_data['data'] = corporate_serializer.data
 
             profile = Profile.objects.filter(user=user).first()
-            resp_data['is_corporate'] = True
+            resp_data['is_corporate'] = False
             profile_serializer = ProfileSerializer(profile)
             resp_data['data'] = profile_serializer.data
 
@@ -105,16 +105,22 @@ class UserInfoByTokenView(views.APIView):
             return response.Response({"status": "Token's field not provided"}, status=status.HTTP_400_BAD_REQUEST)
 
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms='HS256')
+        resp_data = {'token': token}
         user = User.objects.filter(email=payload['email']).first()
         if not user:
             return response.Response({'error': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)
         profile = Profile.objects.filter(user=user).first()
         if profile:
             profile_serializer_data = ProfileSerializer(profile).data
-            resp_data = {'profile': profile_serializer_data}
-            return response.Response(resp_data, status=status.HTTP_200_OK)
-        user_serializer_data = UserSerializer(user).data
-        return response.Response(user_serializer_data, status=status.HTTP_200_OK)
+            resp_data['data'] = profile_serializer_data
+
+        corporate = Corporate.objects.filter(user=user).first()
+        if corporate:
+            corporate_serializer_data = ProfileSerializer(profile).data
+            resp_data['data'] = corporate_serializer_data
+
+        resp_status = status.HTTP_200_OK
+        return response.Response(resp_data, status=resp_status)
 
 
 class CorporateViewset(ModelViewSet):
