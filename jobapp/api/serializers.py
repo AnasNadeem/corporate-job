@@ -1,6 +1,10 @@
 from jobapp.models import Corporate, Job, Profile, User
 from rest_framework import serializers
 
+######################
+# ---- USER ---- #
+######################
+
 
 class UserSerializer(serializers.ModelSerializer):
 
@@ -64,12 +68,38 @@ class RegisterSerializer(serializers.ModelSerializer):
         return user
 
 
+class LoginSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(max_length=50, min_length=4)
+    email = serializers.EmailField(max_length=100)
+
+    class Meta:
+        model = User
+        fields = ('email', 'password')
+        read_only_fields = ('password', )
+
+
+class TokenSerializer(serializers.Serializer):
+    token = serializers.CharField(max_length=250)
+
+######################
+# ---- JOB ---- #
+######################
+
+
 class JobSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Job
         fields = '__all__'
-        depth = 1
+
+
+class JobInterestSerializer(serializers.Serializer):
+    action_choices = [('add', 'Add to interest'), ('remove', 'Remove from interest')]
+    action = serializers.ChoiceField(choices=action_choices)
+
+######################
+# ---- CORPORATE ---- #
+######################
 
 
 class CorporateSerializer(serializers.ModelSerializer):
@@ -98,6 +128,11 @@ class CorporateWithJobSerializer(serializers.ModelSerializer):
         jobs = corporate.job_set.all()
         jobs_serializer = JobSerializer(jobs, many=True)
         return jobs_serializer.data
+
+
+######################
+# ---- PROFILE ---- #
+######################
 
 
 class ProfileSerializer(serializers.ModelSerializer):

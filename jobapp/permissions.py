@@ -1,17 +1,20 @@
-from rest_framework import permissions
+from rest_framework.permissions import IsAuthenticated
 from jobapp.models import Corporate
 
 
-class IsCorporateOrJobOwner(permissions.BasePermission):
+class IsCorporate(IsAuthenticated):
+
+    def has_permission(self, request, view):
+        corporate = Corporate.objects.filter(user=request.user).first()
+        if not corporate:
+            return False
+        return True
 
     def has_object_permission(self, request, view, obj):
-        if request.method in permissions.SAFE_METHODS:
-            return True
-
         return obj.user == request.user
 
 
-class IsCorporateJobOwner(permissions.BasePermission):
+class IsCorporateJobOwner(IsAuthenticated):
 
     def has_permission(self, request, view):
         corporate = Corporate.objects.filter(user=request.user).first()

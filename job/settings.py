@@ -62,6 +62,9 @@ SWAGGER_SETTINGS = {
 }
 
 REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'jobapp.jwtauth.JWTAuthentication',
     ),
@@ -88,8 +91,7 @@ ROOT_URLCONF = 'job.urls'
 CORS_ORIGIN_WHITELIST = [
     'http://localhost:3000',
     'http://127.0.0.1:3000',
-    'https://reattire.vercel.app/',
-    '*'
+    'https://reattire.vercel.app',
 ]
 
 TEMPLATES = [

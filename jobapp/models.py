@@ -46,7 +46,7 @@ class Corporate(TimeBaseModel):
     is_paid = models.BooleanField(default=False)
 
     def __str__(self):
-        return self.name
+        return f"{self.user.email} - {self.name}"
 
 
 class Job(TimeBaseModel):
