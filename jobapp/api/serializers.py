@@ -103,6 +103,13 @@ class JobInterestSerializer(serializers.Serializer):
 
 
 class CorporateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Corporate
+        fields = '__all__'
+
+
+class CorporateWithUserSerializer(serializers.ModelSerializer):
     user = UserSerializer()
 
     class Meta:
