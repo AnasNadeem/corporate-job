@@ -2,71 +2,92 @@ import jwt
 
 from django.conf import settings
 
-from rest_framework import response, status, views
-from rest_framework.generics import GenericAPIView, ListAPIView
+from rest_framework import response, status
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import ModelViewSet
 from django_filters import rest_framework as filters
 
-from .serializers import (ProfileSerializer,
-                          RegisterUserSerializer,
-                          RegisterSerializer,
-                          UserSerializer,
-                          CorporateSerializer,
-                          CorporateWithJobSerializer,
-                          JobSerializer,
-                          )
+from .serializers import (
+    CorporateSerializer,
+    CorporateWithJobSerializer,
+    JobSerializer,
+    JobInterestSerializer,
+    LoginSerializer,
+    ProfileSerializer,
+    RegisterUserSerializer,
+    RegisterSerializer,
+    TokenSerializer,
+    UserSerializer,
+)
 from jobapp.models import User, Corporate, Profile, Job
-from jobapp.permissions import IsCorporateOrJobOwner, IsCorporateJobOwner
+from jobapp.permissions import IsCorporate, IsCorporateJobOwner
 
 
-class RegisterUserAPiView(GenericAPIView):
-    serializer_class = RegisterUserSerializer
+class UserViewset(ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = ()
 
-    def post(self, request):
-        serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return response.Response(serializer.data, status=status.HTTP_201_CREATED)
-        return response.Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    # def get_permissions(self):
+    #     user_permission_map = {
+    #         "update": UserPermission
+    #     }
+    #     if user_permission_map.get(self.action.lower()):
+    #         self.permission_classes = user_permission_map.get(self.action.lower())
+    #     return super().get_permissions()
 
+    def get_serializer_class(self):
+        user_serializer_map = {
+            "register_user": RegisterUserSerializer,
+            "register": RegisterSerializer,
+            "login": LoginSerializer,
+            "user_info_by_token": TokenSerializer,
+        }
+        return user_serializer_map.get(self.action.lower(), UserSerializer)
 
-class RegisterAPiView(GenericAPIView):
-    serializer_class = RegisterSerializer
+    @action(detail=False, methods=['post'])
+    def register_user(self, request):
+        serializer = self.get_serializer_class()
+        serializer = serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        user = User.objects.filter(email=serializer.data.get('email')).first()
+        user_serializer = UserSerializer(user)
+        return response.Response(user_serializer.data, status=status.HTTP_201_CREATED)
 
-    def post(self, request):
+    @action(detail=False, methods=['post'])
+    def register(self, request):
         data = request.data
-        serializer = self.serializer_class(data=data)
-        if serializer.is_valid():
-            serializer.save()
-            user = User.objects.filter(email=serializer.data['email']).first()
-            if not user:
-                return response.Response({'error': 'Register error. Try again'}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.get_serializer_class()
+        serializer = serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        user = User.objects.filter(email=serializer.data['email']).first()
+        if not user:
+            return response.Response({'error': 'Register error. Try again'}, status=status.HTTP_400_BAD_REQUEST)
 
-            auth_token = jwt.encode({'email': user.email}, settings.SECRET_KEY, algorithm='HS256')
-            user_serializer = UserSerializer(user)
-            resp_data = {'user': user_serializer.data, 'token': auth_token}
+        auth_token = jwt.encode({'email': user.email}, settings.SECRET_KEY, algorithm='HS256')
+        user_serializer = UserSerializer(user)
+        resp_data = {'user': user_serializer.data, 'token': auth_token}
 
-            corporate = Corporate.objects.filter(user=user).first()
-            if corporate:
-                resp_data['is_corporate'] = True
-                corporate_serializer = CorporateSerializer(corporate)
-                resp_data['data'] = corporate_serializer.data
+        corporate = Corporate.objects.filter(user=user).first()
+        if corporate:
+            resp_data['is_corporate'] = True
+            corporate_serializer = CorporateSerializer(corporate)
+            resp_data['data'] = corporate_serializer.data
 
-            profile = Profile.objects.filter(user=user).first()
-            if profile:
-                resp_data['is_corporate'] = False
-                profile_serializer = ProfileSerializer(profile)
-                resp_data['data'] = profile_serializer.data
+        profile = Profile.objects.filter(user=user).first()
+        if profile:
+            resp_data['is_corporate'] = False
+            profile_serializer = ProfileSerializer(profile)
+            resp_data['data'] = profile_serializer.data
 
-            resp_status = status.HTTP_201_CREATED
-            return response.Response(resp_data, status=resp_status)
-        return response.Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        resp_status = status.HTTP_201_CREATED
+        return response.Response(resp_data, status=resp_status)
 
-
-class LoginApiView(views.APIView):
-
-    def post(self, request):
+    @action(detail=False, methods=['put'])
+    def login(self, request):
         data = request.data
         email = data.get('email', '')
         password = data.get('password', '')
@@ -88,16 +109,14 @@ class LoginApiView(views.APIView):
 
         corporate = Corporate.objects.filter(user=user).first()
         if corporate:
-            corporate_serializer_data = ProfileSerializer(profile).data
+            corporate_serializer_data = CorporateWithJobSerializer(corporate).data
             resp_data['data'] = corporate_serializer_data
 
         resp_status = status.HTTP_200_OK
         return response.Response(resp_data, status=resp_status)
 
-
-class UserInfoByTokenView(views.APIView):
-
-    def post(self, request):
+    @action(detail=False, methods=['put'])
+    def user_info_by_token(self, request):
         data = request.data
         token = data.get('token')
         if not token:
@@ -115,7 +134,7 @@ class UserInfoByTokenView(views.APIView):
 
         corporate = Corporate.objects.filter(user=user).first()
         if corporate:
-            corporate_serializer_data = ProfileSerializer(profile).data
+            corporate_serializer_data = CorporateWithJobSerializer(corporate).data
             resp_data['data'] = corporate_serializer_data
 
         resp_status = status.HTTP_200_OK
@@ -124,61 +143,59 @@ class UserInfoByTokenView(views.APIView):
 
 class CorporateViewset(ModelViewSet):
     queryset = Corporate.objects.all()
-    permission_classes = (IsAuthenticated, IsCorporateOrJobOwner,)
+    permission_classes = (IsCorporate, )
     serializer_class = CorporateSerializer
 
     def get_serializer_class(self):
-        if self.action in ['list', 'retrieve']:
-            return CorporateWithJobSerializer
-        return self.serializer_class
+        corporate_serializer_map = {
+            "list": CorporateWithJobSerializer,
+            "retrieve": CorporateWithJobSerializer,
+            "jobs": CorporateWithJobSerializer,
+        }
+        return corporate_serializer_map.get(self.action.lower(), CorporateSerializer)
+
+    @action(detail=True, methods=['get'])
+    def jobs(self, request, pk=None):
+        corporate = self.get_object()
+        serializer = self.get_serializer_class()
+        serializer = serializer(corporate)
+        return response.Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class JobViewset(ModelViewSet):
     queryset = Job.objects.all()
-    permission_classes = (IsAuthenticated, IsCorporateJobOwner,)
-    serializer_class = JobSerializer
-    filter_backends = (filters.DjangoFilterBackend,)
-    filterset_fields = ('id', 'corporate', 'title', 'description', 'total_interest')
-
-
-class ProfileViewset(ModelViewSet):
-    queryset = Profile.objects.all()
-    permission_classes = (IsAuthenticated, IsCorporateOrJobOwner,)
-    serializer_class = ProfileSerializer
-
-
-class ViewJobsView(ListAPIView):
-    queryset = Job.objects.all()
     permission_classes = (IsAuthenticated,)
     serializer_class = JobSerializer
     filter_backends = (filters.DjangoFilterBackend,)
     filterset_fields = ('id', 'corporate', 'title', 'description', 'total_interest')
 
-    # def get(self, request, *args, **kwargs):
-    #     profile = Profile.objects.filter(user=request.user).first()
-    #     response = super().get(request, *args, **kwargs)
-    #     response.data['interest'] =
+    def get_permissions(self):
+        job_permission_map = {
+            "destroy": IsCorporateJobOwner,
+            "update": IsCorporateJobOwner,
+            "partial_update": IsCorporateJobOwner,
+            "create": IsCorporate,
+        }
+        permission_classes = [job_permission_map.get(self.action.lower(), IsAuthenticated)]
+        return [permission() for permission in permission_classes]
 
+    def get_serializer_class(self):
+        job_serializer_map = {
+            "job_interest": JobInterestSerializer,
+        }
+        return job_serializer_map.get(self.action.lower(), JobSerializer)
 
-class ShowInterestJobView(views.APIView):
-    permission_classes = (IsAuthenticated,)
-
-    def post(self, request):
+    @action(detail=True, methods=['put'])
+    def job_interest(self, request, pk=None):
+        job = self.get_object()
         data = request.data
-        job = data.get('job')
         action = data.get('action', 'add')
-        if not job:
-            return response.Response({'error': 'Job id cannot be blank'}, status=status.HTTP_400_BAD_REQUEST)
-        job = Job.objects.filter(pk=job).first()
-        if not job:
-            return response.Response({'error': 'No such job exist'}, status=status.HTTP_400_BAD_REQUEST)
-
         profile = Profile.objects.filter(user=request.user).first()
         if not profile:
             return response.Response({'error': 'Invalid Profile'}, status=status.HTTP_400_BAD_REQUEST)
 
-        if job not in profile.interest_jobs:
-            return response.Response({'error': 'Invalid request. Job already unintrested'}, status=status.HTTP_400_BAD_REQUEST)
+        if job.profile_set.filter(pk=profile.pk).exists():
+            return response.Response({'error': 'Job already in intrested'}, status=status.HTTP_400_BAD_REQUEST)
 
         if action == 'remove':
             profile.interest_jobs.remove(job)
@@ -192,3 +209,9 @@ class ShowInterestJobView(views.APIView):
             job.save()
         job_serializer = JobSerializer(job)
         return response.Response(job_serializer.data, status=status.HTTP_200_OK)
+
+
+class ProfileViewset(ModelViewSet):
+    queryset = Profile.objects.all()
+    permission_classes = (IsAuthenticated, IsCorporate)
+    serializer_class = ProfileSerializer
