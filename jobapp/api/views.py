@@ -15,6 +15,7 @@ from .serializers import (
     JobInterestSerializer,
     LoginSerializer,
     ProfileSerializer,
+    ProfileWithUserSerializer,
     RegisterUserSerializer,
     RegisterSerializer,
     TokenSerializer,
@@ -214,4 +215,10 @@ class JobViewset(ModelViewSet):
 class ProfileViewset(ModelViewSet):
     queryset = Profile.objects.all()
     permission_classes = (IsAuthenticated, IsCorporate)
-    serializer_class = ProfileSerializer
+    serializer_class = ProfileWithUserSerializer
+
+    def get_serializer_class(self):
+        profile_serializer_map = {
+            "create": ProfileSerializer,
+        }
+        return profile_serializer_map.get(self.action.lower(), ProfileSerializer)
