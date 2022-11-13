@@ -12,6 +12,7 @@ from .serializers import (
     CorporateSerializer,
     CorporateWithJobSerializer,
     JobSerializer,
+    JobsWithIntrestedProfileerializer,
     JobInterestSerializer,
     LoginSerializer,
     ProfileSerializer,
@@ -184,6 +185,10 @@ class JobViewset(ModelViewSet):
         job_serializer_map = {
             "job_interest": JobInterestSerializer,
         }
+
+        if self.request.user.is_authenticated and Corporate.objects.filter(user=self.request.user).exists():
+            job_serializer_map['list'] = JobsWithIntrestedProfileerializer
+
         return job_serializer_map.get(self.action.lower(), JobSerializer)
 
     def get_queryset(self):
@@ -191,11 +196,11 @@ class JobViewset(ModelViewSet):
         if not user.is_authenticated:
             return Job.objects.none()
 
-        corporate = user.corporate_set.all().first()
+        corporate = Corporate.objects.filter(user=user).first()
         if not corporate:
-            return Job.objects.none()
+            return Job.objects.all()
 
-        return corporate.jobs_set.all()
+        return corporate.job_set.all()
 
     @action(detail=True, methods=['put'])
     def job_interest(self, request, pk=None):
@@ -206,19 +211,24 @@ class JobViewset(ModelViewSet):
         if not profile:
             return response.Response({'error': 'Invalid Profile'}, status=status.HTTP_400_BAD_REQUEST)
 
-        if job.profile_set.filter(pk=profile.pk).exists():
+        if job.profile_set.filter(pk=profile.pk).exists() and action == 'add':
             return response.Response({'error': 'Job already in intrested'}, status=status.HTTP_400_BAD_REQUEST)
 
         if action == 'remove':
             profile.interest_jobs.remove(job)
             profile.save()
+
             job.total_interest -= 1
+            job.interested_users.remove(profile)
             job.save()
         else:
             profile.interest_jobs.add(job)
             profile.save()
+
             job.total_interest += 1
+            job.interested_users.add(profile)
             job.save()
+
         job_serializer = JobSerializer(job)
         return response.Response(job_serializer.data, status=status.HTTP_200_OK)
 
@@ -227,6 +237,8 @@ class ProfileViewset(ModelViewSet):
     queryset = Profile.objects.all()
     permission_classes = (IsAuthenticated, IsCorporate)
     serializer_class = ProfileWithUserSerializer
+    filter_backends = (filters.DjangoFilterBackend,)
+    filterset_fields = ('id', 'user')
 
     def get_serializer_class(self):
         profile_serializer_map = {
