@@ -91,6 +91,7 @@ class JobSerializer(serializers.ModelSerializer):
     class Meta:
         model = Job
         fields = '__all__'
+        read_only_fields = ('total_interest', 'interested_users')
 
 
 class JobInterestSerializer(serializers.Serializer):
@@ -169,3 +170,11 @@ class ProfileWithUserSerializer(serializers.ModelSerializer):
 #             'description',
 #             'total_interest',
 #         )
+
+
+class JobsWithIntrestedProfileerializer(serializers.ModelSerializer):
+    interested_users = ProfileWithUserSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Job
+        fields = '__all__'
