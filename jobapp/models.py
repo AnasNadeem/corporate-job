@@ -54,6 +54,7 @@ class Job(TimeBaseModel):
     title = models.CharField(max_length=250)
     description = models.TextField(blank=True)
     total_interest = models.IntegerField(default=0)
+    # interested_users = models.ManyToManyField('Profile', null=True, blank=True)
 
     def __str__(self):
         return self.title

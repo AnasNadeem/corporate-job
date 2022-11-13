@@ -186,6 +186,17 @@ class JobViewset(ModelViewSet):
         }
         return job_serializer_map.get(self.action.lower(), JobSerializer)
 
+    def get_queryset(self):
+        user = self.request.user
+        if not user.is_authenticated:
+            return Job.objects.none()
+
+        corporate = user.corporate_set.all().first()
+        if not corporate:
+            return Job.objects.none()
+
+        return corporate.jobs_set.all()
+
     @action(detail=True, methods=['put'])
     def job_interest(self, request, pk=None):
         job = self.get_object()
