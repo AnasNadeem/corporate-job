@@ -106,7 +106,7 @@ class UserViewset(ModelViewSet):
 
         profile = Profile.objects.filter(user=user).first()
         if profile:
-            profile_serializer_data = ProfileSerializer(profile).data
+            profile_serializer_data = ProfileWithUserSerializer(profile).data
             resp_data['data'] = profile_serializer_data
             resp_data['is_corporate'] = False
 
