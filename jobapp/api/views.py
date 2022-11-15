@@ -108,11 +108,13 @@ class UserViewset(ModelViewSet):
         if profile:
             profile_serializer_data = ProfileSerializer(profile).data
             resp_data['data'] = profile_serializer_data
+            resp_data['is_corporate'] = False
 
         corporate = Corporate.objects.filter(user=user).first()
         if corporate:
             corporate_serializer_data = CorporateWithJobSerializer(corporate).data
             resp_data['data'] = corporate_serializer_data
+            resp_data['is_corporate'] = True
 
         resp_status = status.HTTP_200_OK
         return response.Response(resp_data, status=resp_status)
