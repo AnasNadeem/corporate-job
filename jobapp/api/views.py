@@ -13,6 +13,7 @@ from .serializers import (
     CorporateWithJobSerializer,
     JobSerializer,
     JobsWithIntrestedProfileerializer,
+    JobWithCorporateSerializer,
     JobInterestSerializer,
     LoginSerializer,
     ProfileSerializer,
@@ -237,7 +238,7 @@ class JobViewset(ModelViewSet):
 
 class ProfileViewset(ModelViewSet):
     queryset = Profile.objects.all()
-    permission_classes = (IsAuthenticated, IsCorporate)
+    permission_classes = (IsAuthenticated,)
     serializer_class = ProfileWithUserSerializer
     filter_backends = (filters.DjangoFilterBackend,)
     filterset_fields = ('id', 'user')
@@ -247,3 +248,17 @@ class ProfileViewset(ModelViewSet):
             "create": ProfileSerializer,
         }
         return profile_serializer_map.get(self.action.lower(), ProfileSerializer)
+
+    # def get_permissions(self):
+    #     profile_permission_map = {
+    #         "interested_jobs": IsAuthenticated
+    #     }
+    #     permission_classes = [profile_permission_map.get(self.action.lower(), IsAuthenticated)]
+    #     return [permission() for permission in permission_classes]
+
+    @action(detail=True, methods=['get'])
+    def interested_jobs(self, request, pk=None):
+        profile = self.get_object()
+        iterested_jobs = profile.interest_jobs
+        serialized_data = JobWithCorporateSerializer(iterested_jobs, many=True)
+        return response.Response(serialized_data.data, status=status.HTTP_200_OK)

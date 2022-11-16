@@ -158,18 +158,12 @@ class ProfileWithUserSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-# class JobWithUserInterestSerializer(serializers.ModelSerializer):
-#     corporate = CorporateSerializer()
+class JobWithCorporateSerializer(serializers.ModelSerializer):
+    corporate = CorporateSerializer()
 
-#     class Meta:
-#         model = Job
-#         fields = (
-#             'id',
-#             'corporate',
-#             'title',
-#             'description',
-#             'total_interest',
-#         )
+    class Meta:
+        model = Job
+        fields = '__all__'
 
 
 class JobsWithIntrestedProfileerializer(serializers.ModelSerializer):
